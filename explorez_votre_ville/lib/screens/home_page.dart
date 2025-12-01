@@ -54,10 +54,13 @@ class HomePage extends StatelessWidget {
               stopPauseOnTap: true,
             ),
             ElevatedButton.icon(
-              onPressed: null,
-              icon: Icon(Icons.start),
+              onPressed: () {
+                Navigator.pushNamed(context, "/search");
+              },
+              icon: Icon(Icons.travel_explore),
               label: Text("Commencez"),
-            ),
+            )
+
           ],
         ),
       ),
