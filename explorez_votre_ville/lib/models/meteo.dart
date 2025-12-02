@@ -3,20 +3,33 @@ class TempNumData {
   final double feelsLike;
   final int pressure;
   final int humidity;
+  final double tempMin;
+  final double tempMax;
+  final double vitesse;
+  //"wind": { "speed": 4.12, "deg": 240 }
 
   TempNumData({
     required this.temp,
     required this.feelsLike,
     required this.pressure,
     required this.humidity,
+    required this.tempMin,
+    required this.tempMax,
+    required this.vitesse,
   });
 
   factory TempNumData.fromJson(Map<String, dynamic> json) {
+    double wind =
+        double.tryParse(json["wind"]?["speed"]?.toString() ?? "0") ?? 0;
+
     return TempNumData(
       temp: json["temp"],
       feelsLike: json["feels_like"],
       pressure: json["pressure"],
       humidity: json["humidity"],
+      tempMin: json["temp_min"],
+      tempMax: json["temp_max"],
+      vitesse: wind,
     );
   }
 }
