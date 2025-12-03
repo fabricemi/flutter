@@ -1,6 +1,11 @@
+import 'package:explorez_votre_ville/models/lieu.dart';
+import 'package:explorez_votre_ville/widgets/show_meteo.dart';
 import 'package:flutter/material.dart';
 import 'package:explorez_votre_ville/models/meteo.dart';
 import 'package:explorez_votre_ville/models/api_cals.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -13,13 +18,138 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _controller = TextEditingController(
     text: "Paris",
   );
+  final MapController _mapController = MapController();
+  LatLng _latLng = LatLng(48.8566, 2.3522);
+  List<MarkerLayer> lieux = [];
+
+  @override
+  void initState() {
+    super.initState();
+    //_getCurrentLocation();
+    _loadLieux();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Activer le service de localisation')),
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission de localisation refusée')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permission de localisation bloquée')),
+        );
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _latLng = LatLng(position.latitude, position.longitude);
+      });
+
+      /*  getCityWithCoordonates(position.latitude, position.longitude).then((
+        value,
+      ) {
+        _controller.text = value.city;
+        _searchCity();
+        getCityPlaces(value);
+      });
+ */
+      _mapController.move(_latLng, 12.0);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de l\'obtention de la localisation'),
+        ),
+      );
+    }
+  }
+
   // Fonction appelée quand on tape une ville
-  void _searchCity() {
-    setState(() {});
+  void _searchCity() async {
+    try {
+      if (_controller.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Entrez une ville valide")),
+        );
+        return;
+      }
+
+      List<double> location = await getCoordinates(_controller.text);
+
+      if (location.isNotEmpty) {
+        setState(() {
+          _latLng = LatLng(location[0], location[1]);
+        });
+        _mapController.move(_latLng, 12.0);
+        _loadLieux();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucune position trouvée pour cette ville.'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors du géocodage : ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _loadLieux() async {
+    final value = await getCityPlaces(_latLng.latitude, _latLng.longitude);
+    print("called");
+    setState(() {
+      lieux = value.map((e) {
+        return MarkerLayer(
+          markers: [
+            Marker(
+              point: LatLng(e.lat, e.lon),
+              child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+            ),
+          ],
+        );
+      }).toList();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    /* getCityPlaces(_latLng.latitude, _latLng.longitude).then((value) {
+      lieux.clear();
+      for (var e in value) {
+        lieux.add(
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: LatLng(e.lat, e.lon),
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }); */
     return Scaffold(
       appBar: AppBar(title: const Text("Rechercher une ville")),
       body: SingleChildScrollView(
@@ -53,12 +183,49 @@ class _SearchPageState extends State<SearchPage> {
                       style: const TextStyle(color: Colors.red, fontSize: 16),
                     );
                   } else if (!snapshot.hasData) {
-                    return Text('Aucune.');
+                    return Text('Aucune donnée.');
                   } else {
                     Meteo meteo = snapshot.data!;
+
+                    print("$lieux");
                     return _buildCityInfo(meteo);
                   }
                 },
+              ),
+              const SizedBox(height: 20),
+
+              const SizedBox(height: 20),
+
+              SizedBox(
+                height: 400,
+                child: FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _latLng,
+                    initialZoom: 10.0,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                      subdomains: const ['a', 'b', 'c', 'd'],
+                      retinaMode: RetinaMode.isHighDensity(context),
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _latLng,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ...lieux,
+                  ],
+                ),
               ),
             ],
           ),
@@ -69,110 +236,5 @@ class _SearchPageState extends State<SearchPage> {
 }
 
 Widget _buildCityInfo(Meteo meteo) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Text(
-        meteo.city,
-        style: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: Colors.teal,
-          letterSpacing: 1.2,
-        ),
-      ),
-      SizedBox(height: 16),
-      Card(
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: Colors.teal.shade50,
-        child: Padding(
-          padding: EdgeInsetsGeometry.all(20),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.cloud, color: Colors.teal, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Météo",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    meteo.tempCarData.description,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.thermostat, color: Colors.teal, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Min / Max",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    "${meteo.tempNumData.tempMin}° / ${meteo.tempNumData.tempMax}°",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.water_drop, color: Colors.teal, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Humidité",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    "${meteo.tempNumData.humidity}%",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.air, color: Colors.teal, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Pression",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    "${meteo.tempNumData.pressure} hPa",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
+  return ShowMeteo(meteo: meteo);
 }

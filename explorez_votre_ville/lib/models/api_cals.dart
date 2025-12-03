@@ -27,12 +27,12 @@ Future<Meteo> fetchCityInfoFromOWM(String city) async {
 }
 
 /// Récupérer les coordonnées d'un lieu ville (un couple [lat, long])
-Future<List<Lieu>> getCityPlaces(Meteo city) async {
+Future<List<Lieu>> getCityPlaces(double lat, double lon) async {
   const GEO_API = "5b389f1f140a46118a29391272e46c13";
   print("appelé");
 
   final url =
-      "https://api.geoapify.com/v2/places?categories=entertainment.museum&filter=circle:${city.coords.lon},${city.coords.lat},4000&apiKey=$GEO_API";
+      "https://api.geoapify.com/v2/places?categories=entertainment.museum&filter=circle:${lon},${lat},4000&apiKey=$GEO_API";
 
   final response = await http.get(
     Uri.parse(url),
@@ -52,7 +52,7 @@ Future<List<Lieu>> getCityPlaces(Meteo city) async {
     //print("ville ${city.city}");
     //print("coord: ${city.coords.lat} - ${city.coords.lon}");
     //print("cle api : $GEO_API");
-    print("lieux= $lieux");
+    //print("lieux= $lieux");
     //print("lieux= $bodyJson");
     return lieux;
   } else {
