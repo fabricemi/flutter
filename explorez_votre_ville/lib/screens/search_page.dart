@@ -15,20 +15,20 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final TextEditingController _controller = TextEditingController(
-    text: "Paris",
-  );
+  final TextEditingController _controller = TextEditingController(text: "Paris");
   final MapController _mapController = MapController();
+
   LatLng _latLng = LatLng(48.8566, 2.3522);
   List<MarkerLayer> lieux = [];
+  List<Lieu> lieuxInfos = []; // Pour afficher une liste lisible
 
   @override
   void initState() {
     super.initState();
-    //_getCurrentLocation();
     _loadLieux();
   }
 
+  /// Localisation GPS (non utilisée pour l'instant)
   Future<void> _getCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -58,98 +58,74 @@ class _SearchPageState extends State<SearchPage> {
       }
 
       Position position = await Geolocator.getCurrentPosition();
+
       setState(() {
         _latLng = LatLng(position.latitude, position.longitude);
       });
 
-      /*  getCityWithCoordonates(position.latitude, position.longitude).then((
-        value,
-      ) {
-        _controller.text = value.city;
-        _searchCity();
-        getCityPlaces(value);
-      });
- */
       _mapController.move(_latLng, 12.0);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erreur lors de l\'obtention de la localisation'),
-        ),
+            content: Text('Erreur lors de la récupération de la localisation')),
       );
     }
   }
 
-  // Fonction appelée quand on tape une ville
+  /// Recherche ville → coordonnées
   void _searchCity() async {
-    try {
-      if (_controller.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Entrez une ville valide")),
-        );
-        return;
-      }
+    if (_controller.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Entrez une ville valide")),
+      );
+      return;
+    }
 
+    try {
       List<double> location = await getCoordinates(_controller.text);
 
       if (location.isNotEmpty) {
         setState(() {
           _latLng = LatLng(location[0], location[1]);
         });
+
         _mapController.move(_latLng, 12.0);
         _loadLieux();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Aucune position trouvée pour cette ville.'),
-          ),
-        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du géocodage : ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
     }
   }
 
+  /// Charger les lieux proches d’une ville
   Future<void> _loadLieux() async {
-    final value = await getCityPlaces(_latLng.latitude, _latLng.longitude);
-    print("called");
-    setState(() {
-      lieux = value.map((e) {
-        return MarkerLayer(
-          markers: [
-            Marker(
-              point: LatLng(e.lat, e.lon),
-              child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-            ),
-          ],
-        );
-      }).toList();
-    });
+    try {
+      final value =
+      await getCityPlaces(_latLng.latitude, _latLng.longitude);
+
+      setState(() {
+        lieuxInfos = value;
+
+        lieux = value.map((e) {
+          return MarkerLayer(
+            markers: [
+              Marker(
+                point: LatLng(e.lat, e.lon),
+                child: const Icon(Icons.location_on,
+                    color: Colors.red, size: 40),
+              ),
+            ],
+          );
+        }).toList();
+      });
+    } catch (e) {
+      print("Erreur chargement lieux : $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    /* getCityPlaces(_latLng.latitude, _latLng.longitude).then((value) {
-      lieux.clear();
-      for (var e in value) {
-        lieux.add(
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: LatLng(e.lat, e.lon),
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                  size: 40,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    }); */
     return Scaffold(
       appBar: AppBar(title: const Text("Rechercher une ville")),
       body: SingleChildScrollView(
@@ -172,30 +148,42 @@ class _SearchPageState extends State<SearchPage> {
 
               const SizedBox(height: 20),
 
+              /// Affichage météo
               FutureBuilder(
                 future: fetchCityInfoFromOWM(_controller.text),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.active) {
-                    return CircularProgressIndicator();
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
-                    return Text(
-                      snapshot.error.toString(),
-                      style: const TextStyle(color: Colors.red, fontSize: 16),
-                    );
+                    return Text(snapshot.error.toString(),
+                        style: const TextStyle(
+                            color: Colors.red, fontSize: 16));
                   } else if (!snapshot.hasData) {
-                    return Text('Aucune donnée.');
+                    return const Text('Aucune donnée.');
                   } else {
                     Meteo meteo = snapshot.data!;
-
-                    print("$lieux");
                     return _buildCityInfo(meteo);
                   }
                 },
               ),
-              const SizedBox(height: 20),
 
               const SizedBox(height: 20),
 
+              /// Bouton Ajouter un lieu
+              ElevatedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text("Fonction Ajouter un lieu à implémenter")),
+                  );
+                },
+                icon: Icon(Icons.add_location_alt),
+                label: Text("Ajouter un lieu"),
+              ),
+
+              const SizedBox(height: 25),
+
+              /// Carte + marqueurs
               SizedBox(
                 height: 400,
                 child: FlutterMap(
@@ -207,7 +195,7 @@ class _SearchPageState extends State<SearchPage> {
                   children: [
                     TileLayer(
                       urlTemplate:
-                          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                       subdomains: const ['a', 'b', 'c', 'd'],
                       retinaMode: RetinaMode.isHighDensity(context),
                     ),
@@ -215,17 +203,36 @@ class _SearchPageState extends State<SearchPage> {
                       markers: [
                         Marker(
                           point: _latLng,
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
-                            size: 40,
-                          ),
+                          child: const Icon(Icons.location_on,
+                              color: Colors.blue, size: 40),
                         ),
                       ],
                     ),
                     ...lieux,
                   ],
                 ),
+              ),
+
+              const SizedBox(height: 25),
+
+              /// Liste des lieux trouvés
+              if (lieuxInfos.isNotEmpty)
+                const Text("Lieux trouvés à proximité :",
+                    style:
+                    TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: lieuxInfos.length,
+                itemBuilder: (context, index) {
+                  final l = lieuxInfos[index];
+                  return ListTile(
+                    leading: Icon(Icons.place, color: Colors.red),
+                    title: Text(l.name.isEmpty ? "Lieu ${index + 1}" : l.name),
+                    subtitle: Text("Lat: ${l.lat}, Lon: ${l.lon}"),
+                  );
+                },
               ),
             ],
           ),
