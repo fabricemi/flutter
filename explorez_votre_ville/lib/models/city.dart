@@ -1,19 +1,14 @@
 class City {
-  final int id;
+  int? id;
   final String name;
   final double lat;
   final double lon;
 
-  City({
-    required this.id,
-    required this.name,
-    required this.lat,
-    required this.lon,
-  });
+  City({this.id, required this.name, required this.lat, required this.lon});
 
+  @override
   String toString() {
-    // TODO: implement toString
-    return 'Favori{id: $id, city: $name}';
+    return 'Ville{id: $id, name: $name}';
   }
 
   Map<String, Object?> toMap() {

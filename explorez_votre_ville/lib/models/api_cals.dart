@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:explorez_votre_ville/models/lieu.dart';
 import 'package:explorez_votre_ville/models/meteo.dart';
 import 'package:http/http.dart' as http;
@@ -47,7 +46,46 @@ Future<List<Lieu>> getCityPlaces(double lat, double lon) async {
     List<Lieu> lieux = [];
 
     for (var e in bodyJson) {
-      lieux.add(Lieu.fromJson(e["properties"]));
+      lieux.add(Lieu.fromJson(e["properties"], lat, lon));
+    }
+    //print("ville ${city.city}");
+    //print("coord: ${city.coords.lat} - ${city.coords.lon}");
+    //print("cle api : $GEO_API");
+    //print("lieux= $lieux");
+    //print("lieux= $bodyJson");
+    return lieux;
+  } else {
+    throw Exception("une erreur s'est produite");
+  }
+}
+
+/// Récupérer les coordonnées d'un lieu ville (un couple [lat, long])
+Future<List<Lieu>> getCityPlacesAvecCategorie(
+  double lat,
+  double lon,
+  String categories,
+) async {
+  const GEO_API = "5b389f1f140a46118a29391272e46c13";
+
+  final url =
+      "https://api.geoapify.com/v2/places?categories=$categories&filter=circle:${lon},${lat},10000&apiKey=$GEO_API";
+
+  final response = await http.get(
+    Uri.parse(url),
+    headers: {'User-Agent': 'FlutterApp'},
+  );
+
+  print("url= $url");
+  if (response.statusCode == 200) {
+    List<Map<String, dynamic>> bodyJson = List<Map<String, dynamic>>.from(
+      (jsonDecode(response.body)["features"] as List<dynamic>).map(
+        (e) => e as Map<String, dynamic>,
+      ),
+    );
+    List<Lieu> lieux = [];
+
+    for (var e in bodyJson) {
+      lieux.add(Lieu.fromJson(e["properties"], lat, lon));
     }
     //print("ville ${city.city}");
     //print("coord: ${city.coords.lat} - ${city.coords.lon}");

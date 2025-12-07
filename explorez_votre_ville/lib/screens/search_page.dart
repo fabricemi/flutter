@@ -1,4 +1,8 @@
+import 'package:explorez_votre_ville/db/db.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
+import 'package:explorez_votre_ville/widgets/dialogs_page.dart';
+import 'package:explorez_votre_ville/widgets/place_plot.dart';
+import 'package:explorez_votre_ville/widgets/places.dart';
 import 'package:explorez_votre_ville/widgets/show_meteo.dart';
 import 'package:flutter/material.dart';
 import 'package:explorez_votre_ville/models/meteo.dart';
@@ -15,16 +19,18 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final TextEditingController _controller = TextEditingController(text: "Paris");
+  final TextEditingController _controller = TextEditingController();
   final MapController _mapController = MapController();
-
+  bool initialisation = true;
   LatLng _latLng = LatLng(48.8566, 2.3522);
-  List<MarkerLayer> lieux = [];
+  List<PlacePlot> lieux = [];
+
   List<Lieu> lieuxInfos = []; // Pour afficher une liste lisible
 
   @override
   void initState() {
     super.initState();
+    _getRandomFavoris();
     _loadLieux();
   }
 
@@ -67,17 +73,29 @@ class _SearchPageState extends State<SearchPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Erreur lors de la récupération de la localisation')),
+          content: Text('Erreur lors de la récupération de la localisation'),
+        ),
       );
     }
   }
 
-  /// Recherche ville → coordonnées
+  void _getRandomFavoris() async {
+    final city = await getRandomCity();
+    if (city.isEmpty) {
+      _controller.text = "Paris";
+      _latLng = LatLng(48.8566, 2.3522);
+      return;
+    }
+    _controller.text = city.first.name;
+    _latLng = LatLng(city.first.lat, city.first.lon);
+    initialisation = false;
+  }
+
   void _searchCity() async {
     if (_controller.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Entrez une ville valide")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Entrez une ville valide")));
       return;
     }
 
@@ -93,34 +111,50 @@ class _SearchPageState extends State<SearchPage> {
         _loadLieux();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
     }
   }
 
   /// Charger les lieux proches d’une ville
   Future<void> _loadLieux() async {
     try {
-      final value =
-      await getCityPlaces(_latLng.latitude, _latLng.longitude);
-
+      final value = await getCityPlaces(_latLng.latitude, _latLng.longitude);
+      //await initDatabase();
       setState(() {
-        lieuxInfos = value;
+        //lieuxInfos = value;
 
         lieux = value.map((e) {
-          return MarkerLayer(
-            markers: [
-              Marker(
-                point: LatLng(e.lat, e.lon),
-                child: const Icon(Icons.location_on,
-                    color: Colors.red, size: 40),
-              ),
-            ],
-          );
+          return PlacePlot(e: e);
         }).toList();
       });
     } catch (e) {
-      print("Erreur chargement lieux : $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
+    }
+  }
+
+  Future<void> _loadLieux2(String categorie) async {
+    try {
+      final value = await getCityPlacesAvecCategorie(
+        _latLng.latitude,
+        _latLng.longitude,
+        categorie,
+      );
+
+      setState(() {
+        //lieuxInfos = value;
+
+        lieux = value.map((e) {
+          return PlacePlot(e: e);
+        }).toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
     }
   }
 
@@ -155,9 +189,10 @@ class _SearchPageState extends State<SearchPage> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
-                    return Text(snapshot.error.toString(),
-                        style: const TextStyle(
-                            color: Colors.red, fontSize: 16));
+                    return Text(
+                      snapshot.error.toString(),
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                    );
                   } else if (!snapshot.hasData) {
                     return const Text('Aucune donnée.');
                   } else {
@@ -168,14 +203,12 @@ class _SearchPageState extends State<SearchPage> {
               ),
 
               const SizedBox(height: 20),
-
-              /// Bouton Ajouter un lieu
               ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text("Fonction Ajouter un lieu à implémenter")),
-                  );
+                onPressed: () async {
+                  final resultat = await showCategoriesDialog(context);
+                  if (resultat != null) {
+                    _loadLieux2(resultat);
+                  }
                 },
                 icon: Icon(Icons.add_location_alt),
                 label: Text("Ajouter un lieu"),
@@ -195,7 +228,7 @@ class _SearchPageState extends State<SearchPage> {
                   children: [
                     TileLayer(
                       urlTemplate:
-                      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                       subdomains: const ['a', 'b', 'c', 'd'],
                       retinaMode: RetinaMode.isHighDensity(context),
                     ),
@@ -203,8 +236,11 @@ class _SearchPageState extends State<SearchPage> {
                       markers: [
                         Marker(
                           point: _latLng,
-                          child: const Icon(Icons.location_on,
-                              color: Colors.blue, size: 40),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.blue,
+                            size: 40,
+                          ),
                         ),
                       ],
                     ),
@@ -214,24 +250,24 @@ class _SearchPageState extends State<SearchPage> {
               ),
 
               const SizedBox(height: 25),
+              Text("Les Favoris"),
 
-              /// Liste des lieux trouvés
-              if (lieuxInfos.isNotEmpty)
-                const Text("Lieux trouvés à proximité :",
-                    style:
-                    TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: lieuxInfos.length,
-                itemBuilder: (context, index) {
-                  final l = lieuxInfos[index];
-                  return ListTile(
-                    leading: Icon(Icons.place, color: Colors.red),
-                    title: Text(l.name.isEmpty ? "Lieu ${index + 1}" : l.name),
-                    subtitle: Text("Lat: ${l.lat}, Lon: ${l.lon}"),
-                  );
+              ///cette partie est à ameliorer
+              FutureBuilder(
+                future: getLieux(_controller.text),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.active) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text(snapshot.error.toString());
+                  } else {
+                    final data = snapshot.data!;
+                    if (data.isEmpty) {
+                      return Text("Aucun lieu favoris");
+                    } else {
+                      return PlacesListView(favoris: data);
+                    }
+                  }
                 },
               ),
             ],

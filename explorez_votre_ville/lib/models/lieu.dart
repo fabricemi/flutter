@@ -4,6 +4,8 @@ class Lieu {
   final double lat;
   final double lon;
   final String city;
+  double? cityLat;
+  double? cityLon;
 
   Lieu({
     this.id,
@@ -11,14 +13,18 @@ class Lieu {
     required this.lat,
     required this.lon,
     required this.city,
+    this.cityLat,
+    this.cityLon,
   });
 
-  factory Lieu.fromJson(Map<String, dynamic> json) {
+  factory Lieu.fromJson(Map<String, dynamic> json, double lat, double lon) {
     return Lieu(
       name: json["name"],
       lat: json["lat"],
       lon: json["lon"],
       city: json["city"],
+      cityLat: lat,
+      cityLon: lon,
     );
   }
 
