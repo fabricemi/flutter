@@ -6,7 +6,6 @@ class TempNumData {
   final double tempMin;
   final double tempMax;
   final double vitesse;
-  //"wind": { "speed": 4.12, "deg": 240 }
 
   TempNumData({
     required this.temp,
@@ -19,16 +18,26 @@ class TempNumData {
   });
 
   factory TempNumData.fromJson(Map<String, dynamic> json) {
+    double toDouble(dynamic value) {
+      if (value is int) {
+        return value.toDouble();
+      }
+      if (value is double) {
+        return value;
+      }
+      return double.tryParse(value?.toString() ?? "0") ?? 0;
+    }
+
     double wind =
         double.tryParse(json["wind"]?["speed"]?.toString() ?? "0") ?? 0;
 
     return TempNumData(
-      temp: json["temp"],
-      feelsLike: json["feels_like"],
-      pressure: json["pressure"],
-      humidity: json["humidity"],
-      tempMin: json["temp_min"],
-      tempMax: json["temp_max"],
+      temp: toDouble(json["temp"]),
+      feelsLike: toDouble(json["feels_like"]),
+      pressure: json["pressure"] as int,
+      humidity: json["humidity"] as int,
+      tempMin: toDouble(json["temp_min"]),
+      tempMax: toDouble(json["temp_max"]),
       vitesse: wind,
     );
   }

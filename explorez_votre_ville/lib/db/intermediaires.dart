@@ -22,8 +22,12 @@ Future<void> insererUnLieu(Lieu lieu) async {
 }
  */
 
-Future<void> insererUnLieu(Lieu lieu) async {
-  final res = await inserLieu(lieu);
+Future<void> insererUnLieu(Lieu lieu, {String? ville}) async {
+  if (ville != null) {
+    await inserLieu(lieu, ville: ville);
+  } else {
+    await inserLieu(lieu);
+  }
   //final lieux = await getLieux(lieu.city);
   //final villes = await getCities();
 

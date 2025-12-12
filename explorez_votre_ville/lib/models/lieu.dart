@@ -3,7 +3,7 @@ class Lieu {
   final String name;
   final double lat;
   final double lon;
-  final String city;
+  String city;
   double? cityLat;
   double? cityLon;
 
@@ -17,12 +17,27 @@ class Lieu {
     this.cityLon,
   });
 
-  factory Lieu.fromJson(Map<String, dynamic> json, double lat, double lon) {
+  factory Lieu.fromJson(
+    Map<String, dynamic> json,
+    double lat,
+    double lon, {
+    String? lnom,
+    String? ville,
+  }) {
+    String nom =
+        lnom ??
+        json["name"] ??
+        json["address_line1"] ??
+        json["street"] ??
+        json["formatted"] ??
+        "Lieu sans nom";
+
+    String v = ville ?? json["city"];
     return Lieu(
-      name: json["name"],
+      name: nom,
       lat: json["lat"],
       lon: json["lon"],
-      city: json["city"],
+      city: v,
       cityLat: lat,
       cityLon: lon,
     );

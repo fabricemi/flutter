@@ -1,14 +1,18 @@
 import 'package:explorez_votre_ville/db/db.dart';
+import 'package:explorez_votre_ville/listeners/recherche_providers.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
 import 'package:explorez_votre_ville/widgets/dialogs_page.dart';
 import 'package:explorez_votre_ville/widgets/place_plot.dart';
 import 'package:explorez_votre_ville/widgets/places.dart';
+import 'package:explorez_votre_ville/widgets/searche_by_name.dart';
 import 'package:explorez_votre_ville/widgets/show_meteo.dart';
 import 'package:flutter/material.dart';
 import 'package:explorez_votre_ville/models/meteo.dart';
 import 'package:explorez_votre_ville/models/api_cals.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -19,10 +23,16 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController _controller2 = TextEditingController();
   final MapController _mapController = MapController();
-
-  LatLng _latLng = const LatLng(48.8566, 2.3522);
+  LatLng _latLng = LatLng(48.8566, 2.3522);
   List<PlacePlot> lieux = [];
+  Future<List<Lieu>> _futurListLieux = Future.value([]);
+  Future<List<Lieu>> _futurListLieuxTrouve = Future.value([]);
+
+  Future<Meteo>? _meteo;
+
+  String? ville;
 
   @override
   void initState() {
@@ -31,216 +41,321 @@ class _SearchPageState extends State<SearchPage> {
     _loadLieux();
   }
 
-  // Ville aléatoire enregistrée localement
+  /// Localisation GPS (non utilisée pour l'instant)
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Activer le service de localisation')),
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission de localisation refusée')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permission de localisation bloquée')),
+        );
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition();
+
+      setState(() {
+        _latLng = LatLng(position.latitude, position.longitude);
+      });
+
+      _mapController.move(_latLng, 12.0);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de la récupération de la localisation'),
+        ),
+      );
+    }
+  }
+
   void _getRandomFavoris() async {
     final city = await getRandomCity();
     if (city.isEmpty) {
       _controller.text = "Paris";
-      _latLng = const LatLng(48.8566, 2.3522);
-      return;
+      _latLng = LatLng(48.8566, 2.3522);
+      _futurListLieux = Future.value([]);
+    } else {
+      _controller.text = city.first.name;
+      _latLng = LatLng(city.first.lat, city.first.lon);
+      _futurListLieux = getLieux(_controller.text);
     }
-    _controller.text = city.first.name;
-    _latLng = LatLng(city.first.lat, city.first.lon);
+    //getPlaceByName("le louvre", 48.8566, 2.3522, "Paris");
+    setState(() {
+      _meteo = fetchCityInfoFromOWM(_controller.text);
+    });
+    _mapController.move(_latLng, 12.0);
+    _loadLieux();
   }
 
-  // Recherche API
   void _searchCity() async {
     if (_controller.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Entrez une ville valide")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Entrez une ville valide")));
       return;
     }
 
+    ville = _controller.text;
+
     try {
-      final loc = await getCoordinates(_controller.text);
-      if (loc.isNotEmpty) {
-        setState(() => _latLng = LatLng(loc[0], loc[1]));
-        _mapController.move(_latLng, 12);
+      List<double> location = await getCoordinates(_controller.text);
+
+      if (location.isNotEmpty) {
+        setState(() {
+          _latLng = LatLng(location[0], location[1]);
+          _meteo = fetchCityInfoFromOWM(_controller.text);
+          _futurListLieux = getLieux(_controller.text);
+        });
+
+        _mapController.move(_latLng, 12.0);
         _loadLieux();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur : $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
     }
   }
 
-  // Chargement des lieux via Geoapify
+  void _insert(Lieu e, {String? v}) async {
+    print("debut");
+    if (ville != null) {
+      await inserLieu(e, ville: v);
+    } else {
+      await inserLieu(e);
+    }
+    print("fin");
+
+    setState(() {
+      _futurListLieux = getLieux(_controller.text);
+    });
+  }
+
+  /// Charger les lieux proches d’une ville
   Future<void> _loadLieux() async {
-    try {
-      final data = await getCityPlaces(_latLng.latitude, _latLng.longitude);
-      setState(() {
-        lieux = data.map((e) => PlacePlot(e: e)).toList();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur : $e")),
-      );
-    }
+    final value = await getCityPlaces(_latLng.latitude, _latLng.longitude);
+    setState(() {
+      lieux = value.map((e) {
+        return PlacePlot(
+          e: e,
+          onTap: (lieu) {
+            _insert(e, v: _controller.text);
+          },
+        );
+      }).toList();
+    });
   }
 
-  Future<void> _loadLieuxByCategory(String cat) async {
-    try {
-      final data = await getCityPlacesAvecCategorie(
+  Future<void> _loadLieux2(String categorie) async {
+    final value = await getCityPlacesAvecCategorie(
+      _latLng.latitude,
+      _latLng.longitude,
+      categorie,
+      ville: _controller.text,
+    );
+    setState(() {
+      lieux = value.map((e) {
+        return PlacePlot(
+          e: e,
+          onTap: (lieu) {
+            _insert(e, v: _controller.text);
+          },
+        );
+      }).toList();
+    });
+  }
+
+  Future<void> _feedSearchLieuList(String value) async {
+    setState(() {
+      _futurListLieuxTrouve = getPlaceByName(
+        value,
         _latLng.latitude,
         _latLng.longitude,
-        cat,
+        _controller.text,
       );
-      setState(() {
-        lieux = data.map((e) => PlacePlot(e: e)).toList();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur : $e")),
-      );
-    }
+    });
   }
 
-  // Menu d'ajout
-  void _openAddLieuMenu() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Rechercher une ville")),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const Icon(Icons.edit_location_alt),
-                title: const Text("Ajouter manuellement"),
-                subtitle: const Text("Formulaire + sélection sur carte"),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(
-                    context,
-                    "/add-lieu",
-                    arguments: _controller.text.trim(),
-                  );
+              // Champ de recherche
+              TextField(
+                controller: _controller,
+                decoration: InputDecoration(
+                  hintText: "Entrez une ville (ex: Paris)",
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onSubmitted: (_) => _searchCity(),
+              ),
+
+              const SizedBox(height: 20),
+
+              /// Affichage météo
+              FutureBuilder(
+                future: _meteo,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (_meteo == null) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    print("error ${snapshot.error.toString()}");
+                    return Text(
+                      "Erreur ... ${snapshot.error.toString()}",
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                    );
+                  } else if (!snapshot.hasData) {
+                    return const Text('Aucune donnée.');
+                  } else {
+                    Meteo meteo = snapshot.data!;
+                    return _buildCityInfo(meteo);
+                  }
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.category),
-                title: const Text("Ajouter via une catégorie"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final cat = await showCategoriesDialog(context);
-                  if (cat != null) _loadLieuxByCategory(cat);
+
+              const SizedBox(height: 20),
+
+              Wrap(
+                direction: Axis.horizontal,
+                spacing: 8.0,
+                runSpacing: 4.0,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text(
+                              "Recherche un lieu dans la ville de ${_controller.text}",
+                            ),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              child: AddLieuComplted(
+                                city: _controller.text,
+                                latLng: _latLng,
+                                onAddLieuCalled: (lieu) {
+                                  _insert(lieu, v: _controller.text);
+                                },
+                              ),
+                            ),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: Text("Fermer"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    icon: Icon(Icons.add_location_alt),
+
+                    label: Text("Ajouter un lieu par le nom"),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final categorie = await showCategoriesDialog(context);
+                      if (categorie != null) {
+                        _loadLieux2(categorie);
+                      }
+                    },
+                    icon: Icon(Icons.add_location_alt),
+
+                    label: Text("Ajouter un lieu par categorie"),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 25),
+
+              /// Carte + marqueurs
+              SizedBox(
+                height: 400,
+                child: FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _latLng,
+                    initialZoom: 10.0,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                      subdomains: const ['a', 'b', 'c', 'd'],
+                      retinaMode: RetinaMode.isHighDensity(context),
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _latLng,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.blue,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ...lieux,
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 25),
+              Text("Les Favoris"),
+              FutureBuilder<List<Lieu>>(
+                future: _futurListLieux,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Erreur : ${snapshot.error}');
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Text('Aucun lieu favoris');
+                  } else {
+                    return PlacesListView(favoris: snapshot.data!);
+                  }
                 },
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  // UI
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Rechercher une ville"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_location_alt),
-            tooltip: "Ajouter un lieu",
-            onPressed: _openAddLieuMenu,
-          ),
-        ],
-      ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: "Entrez une ville (ex: Paris)",
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onSubmitted: (_) => _searchCity(),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Affichage météo
-            FutureBuilder(
-              future: fetchCityInfoFromOWM(_controller.text),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                }
-                if (snapshot.hasError) {
-                  return const Text("Erreur météo",
-                      style: TextStyle(color: Colors.red));
-                }
-                if (!snapshot.hasData) return const SizedBox.shrink();
-                return ShowMeteo(meteo: snapshot.data as Meteo);
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            // Carte
-            SizedBox(
-              height: 400,
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _latLng,
-                  initialZoom: 11,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-                    subdomains: const ['a', 'b', 'c', 'd'],
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: _latLng,
-                        child: const Icon(Icons.location_on,
-                            color: Colors.blue, size: 40),
-                      ),
-                    ],
-                  ),
-                  ...lieux,
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 25),
-            const Text("Les Favoris"),
-
-            FutureBuilder(
-              future: getLieux(_controller.text),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                }
-                if (snapshot.hasError) {
-                  return const Text("Erreur favoris");
-                }
-
-                final data = snapshot.data ?? [];
-                if (data.isEmpty) return const Text("Aucun favori");
-
-                return PlacesListView(favoris: data);
-              },
-            ),
-          ],
         ),
       ),
     );
   }
+}
+
+Widget _buildCityInfo(Meteo meteo) {
+  return ShowMeteo(meteo: meteo);
 }

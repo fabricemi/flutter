@@ -6,16 +6,8 @@ import 'package:latlong2/latlong.dart';
 
 class PlacePlot extends StatelessWidget {
   final Lieu e;
-  const PlacePlot({super.key, required this.e});
-
-  void _insert() async {
-    print("debut");
-
-    await inserLieu(e);
-    await getCities();
-    await getLieux(e.city);
-    print("fin");
-  }
+  final void Function(Lieu lieu)? onTap;
+  PlacePlot({super.key, required this.e, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -32,15 +24,23 @@ class PlacePlot extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _insert();
-                      },
-                      child: Text(
-                        e.name,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    child: Tooltip(
+                      message: "Cliquer pour ajouter aux favoris",
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (onTap != null) {
+                            onTap!(e);
+                          }
+                        },
+                        child: Text(
+                          e.name,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),

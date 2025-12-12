@@ -12,6 +12,6 @@ class City {
   }
 
   Map<String, Object?> toMap() {
-    return {"name": name, "lat": lat, "lon": lon};
+    return {"name": name.toLowerCase(), "lat": lat, "lon": lon};
   }
 }
