@@ -53,3 +53,48 @@ class Lieu {
     return {"id": id, "name": name, "lat": lat, "lon": lon, "city": city};
   }
 }
+
+class LieuInfo {
+  final String address;
+  final String? phone;
+  final String? openingHours;
+  final bool? wheelchair;
+  final bool? internetAccess;
+  final String? website;
+
+  LieuInfo({
+    required this.address,
+    this.phone,
+    this.openingHours,
+    this.wheelchair,
+    this.internetAccess,
+    this.website,
+  });
+
+  factory LieuInfo.fromJson(Map<String, dynamic> json) {
+    final props = json['properties'] ?? {};
+    final contact = props['contact'] ?? {};
+    final facilities = props['facilities'] ?? {};
+
+    return LieuInfo(
+      address: props['address_line2'] ?? '',
+      phone: contact['phone'],
+      openingHours: props['opening_hours'],
+      wheelchair: facilities['wheelchair'],
+      internetAccess: facilities['internet_access'],
+      website: props['website'],
+    );
+  }
+
+  @override
+  String toString() {
+    return '''
+Adresse : $address
+Téléphone : ${phone ?? 'N/A'}
+Horaires : ${openingHours ?? 'N/A'}
+Accès fauteuil : ${wheelchair == true ? 'Oui' : 'Non'}
+Internet : ${internetAccess == true ? 'Oui' : 'Non'}
+Site web : ${website ?? 'N/A'}
+''';
+  }
+}

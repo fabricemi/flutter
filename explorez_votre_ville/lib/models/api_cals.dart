@@ -225,3 +225,33 @@ Future<String?> getStreetViewImageUrl(
     return null;
   }
 }
+
+Future<LieuInfo?> getLieuInfo(double lat, double lon) async {
+  const GEO_API = "5b389f1f140a46118a29391272e46c13";
+  final url =
+      "https://api.geoapify.com/v1/geocode/reverse?lat=$lat&lon=$lon&limit=1&apiKey=$GEO_API";
+  try {
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {'User-Agent': 'FlutterApp'},
+    );
+
+    if (response.statusCode == 200) {
+      final features = (jsonDecode(response.body)["features"] as List<dynamic>?)
+          ?.cast<Map<String, dynamic>>();
+
+      if (features == null || features.isEmpty) {
+        return null;
+      }
+
+      final props = features.first;
+      return LieuInfo.fromJson(props);
+    } else {
+      //print("Erreur Geoapify : ${response.statusCode}");
+      return null;
+    }
+  } catch (e) {
+    //print("Erreur lors de la récupération du lieu : $e");
+    return null;
+  }
+}

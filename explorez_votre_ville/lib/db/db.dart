@@ -37,16 +37,8 @@ Future<Database> initDatabase() async {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         lieu_id INTEGER NOT NULL,
         texte TEXT,
+        note INTEGER,
         date_creation TEXT DEFAULT (datetime('now','localtime')),
-        FOREIGN KEY (lieu_id) REFERENCES lieux(id) ON DELETE CASCADE
-      );
-    ''');
-
-      await db.execute('''
-      CREATE TABLE notes(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        lieu_id INTEGER NOT NULL,
-        note INTEGER NOT NULL,
         FOREIGN KEY (lieu_id) REFERENCES lieux(id) ON DELETE CASCADE
       );
     ''');
@@ -205,7 +197,6 @@ Future<void> ajouterCommentaire(Lieu f, Commentaire com) async {
   if (!existsLieu) {
     return;
   }
-  com.lieu_id = f.id;
   final db = await getDatabase();
   await db.insert(
     'commentaires',
@@ -224,16 +215,18 @@ Future<void> deleteLieu(int id) async {
   }
 }
 
-Future<void> ajouterNote(Lieu f, int noteValue) async {
-  final existsLieu = await existeLieu(f.name);
-
-  if (!existsLieu) {
-    return;
-  }
-
+Future<List<Commentaire>> getComments(int idLieu) async {
   final db = await getDatabase();
+  final favMaps = await db.query(
+    'commentaires',
+    where: 'lieu_id = ?',
+    whereArgs: [idLieu],
+  );
 
-  final note = {'lieu_id': f.id, 'note': noteValue};
+  final commentaires = favMaps.map((c) {
+    return Commentaire(c['texte'] as String, idLieu, c['note'] as int? ?? 0);
+  }).toList();
 
-  await db.insert('notes', note, conflictAlgorithm: ConflictAlgorithm.replace);
+  print('la liste des commentaires : $commentaires');
+  return commentaires;
 }

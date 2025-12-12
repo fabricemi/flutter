@@ -1,4 +1,5 @@
 import 'package:explorez_votre_ville/db/db.dart';
+import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
 import 'package:explorez_votre_ville/listeners/recherche_providers.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
 import 'package:explorez_votre_ville/widgets/dialogs_page.dart';
@@ -345,6 +346,17 @@ class _SearchPageState extends State<SearchPage> {
                     return Text('Aucun lieu favoris');
                   } else {
                     return PlacesListView(favoris: snapshot.data!);
+                    /* Consumer<LieuProvider>(
+                      builder: (context, value, child) {
+                        return PlacesListView(
+                          favoris: snapshot.data!,
+                          onVoirClicked: (l) {
+                            value.changerLieu(l);
+                            Navigator.pushNamed(context, "/details");
+                          },
+                        );
+                      },
+                    ); */
                   }
                 },
               ),

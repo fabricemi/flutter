@@ -1,4 +1,5 @@
 import 'package:explorez_votre_ville/db/db.dart';
+import 'package:explorez_votre_ville/models/commentaire.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
 /* import 'package:explorez_votre_ville/db/drift_cust_db.dart';
 ;
@@ -33,4 +34,9 @@ Future<void> insererUnLieu(Lieu lieu, {String? ville}) async {
 
   //print("les lieux $lieux");
   //print("les villes $villes");
+}
+
+Future<void> ajouterUnCommentaire(Lieu lieu, String contenu, int note) async {
+  Commentaire commentaire = Commentaire(contenu, lieu.id, note);
+  await ajouterCommentaire(lieu, commentaire);
 }

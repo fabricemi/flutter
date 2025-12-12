@@ -1,5 +1,7 @@
 import 'package:explorez_votre_ville/models/lieu.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
 
 class PlacesListView extends StatelessWidget {
   final List<Lieu> favoris;
@@ -23,16 +25,23 @@ class PlacesListView extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(lieu.name),
-                ElevatedButton.icon(
-                  onPressed: null,
-                  icon: Icon(Icons.search),
-                  label: Text("Voir"),
+                Consumer<LieuProvider>(
+                  builder: (context, lieuProvider, child) {
+                    return ElevatedButton.icon(
+                      onPressed: () {
+                        lieuProvider.changerLieu(lieu);
+                        Navigator.pushNamed(context, "/details");
+                      },
+                      icon: const Icon(Icons.search),
+                      label: const Text("Voir"),
+                    );
+                  },
                 ),
               ],
             ),
           );
         },
-        separatorBuilder: (context, index) => SizedBox(width: 10),
+        separatorBuilder: (context, index) => const SizedBox(width: 10),
         itemCount: favoris.length,
       ),
     );
