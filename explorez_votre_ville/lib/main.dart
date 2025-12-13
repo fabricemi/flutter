@@ -1,4 +1,6 @@
 import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
+import 'package:explorez_votre_ville/listeners/recherche_providers.dart';
 import 'package:explorez_votre_ville/screens/home_page.dart';
 import 'package:explorez_votre_ville/screens/ajouter_commentaire.dart';
 import 'package:explorez_votre_ville/screens/lieu_details.dart';
@@ -12,16 +14,36 @@ void main() {
   databaseFactory = databaseFactoryFfi;
 
   runApp(
-    ChangeNotifierProvider(create: (_) => LieuProvider(), child: const Base()),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LieuProvider()),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider()..loadTheme(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => RechercheProviders()
+            ..loadFavoriteCity()
+            ..loadRecentSearches(),
+        ),
+      ],
+      child: const Base(),
+    ),
   );
 }
 
 class Base extends StatelessWidget {
   const Base({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Explorez Votre Ville',
+      themeMode: themeProvider.themeMode,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
       initialRoute: "/",
       routes: {
         "/": (context) => HomePage(),

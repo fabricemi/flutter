@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:provider/provider.dart';
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});

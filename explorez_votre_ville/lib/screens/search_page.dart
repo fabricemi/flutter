@@ -14,6 +14,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
+import 'package:explorez_votre_ville/listeners/recherche_providers.dart';
+
+
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -115,6 +119,8 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     ville = _controller.text;
+    context.read<RechercheProviders>().addRecentSearch(_controller.text);
+
 
     try {
       List<double> location = await getCoordinates(_controller.text);
@@ -198,7 +204,25 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Rechercher une ville")),
+      appBar: AppBar(
+        title: const Text("Rechercher une ville"),
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode
+                      ? Icons.dark_mode
+                      : Icons.light_mode,
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme();
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
