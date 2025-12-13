@@ -1,5 +1,6 @@
 import 'package:explorez_votre_ville/db/db.dart';
 import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 import 'package:explorez_votre_ville/models/api_cals.dart';
 import 'package:explorez_votre_ville/models/commentaire.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
@@ -37,6 +38,7 @@ class _LieuDetailsState extends State<LieuDetails> {
   Widget build(BuildContext context) {
     final lieuProvider = Provider.of<LieuProvider>(context);
     final lieu = lieuProvider.lieu;
+    final colors = Theme.of(context).colorScheme;
 
     if (lieu == null) {
       return Scaffold(
@@ -60,7 +62,6 @@ class _LieuDetailsState extends State<LieuDetails> {
       );
     }
 
-    // eviter dess multiple appel
     if (!_loadingInfo) {
       _getInfo(lieu);
     }
@@ -68,7 +69,23 @@ class _LieuDetailsState extends State<LieuDetails> {
     LatLng latLng = LatLng(lieu.lat, lieu.lon);
 
     return Scaffold(
-      appBar: AppBar(title: Text("Détails du lieu")),
+      appBar: AppBar(
+        title: const Text("Détails du lieu"),
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode
+                      ? Icons.dark_mode
+                      : Icons.light_mode,
+                ),
+                onPressed: themeProvider.toggleTheme,
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -96,7 +113,7 @@ class _LieuDetailsState extends State<LieuDetails> {
                   children: [
                     TileLayer(
                       urlTemplate:
-                          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                       subdomains: const ['a', 'b', 'c', 'd'],
                     ),
                     MarkerLayer(
@@ -113,7 +130,7 @@ class _LieuDetailsState extends State<LieuDetails> {
                                   Expanded(
                                     child: Tooltip(
                                       message:
-                                          info?.toString() ??
+                                      info?.toString() ??
                                           "Description non disponible",
                                       child: ElevatedButton(
                                         onPressed: () {},
@@ -156,16 +173,16 @@ class _LieuDetailsState extends State<LieuDetails> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blueAccent,
+                        color: colors.primary,
                         letterSpacing: 1.0,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: colors.surfaceVariant,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blueAccent.shade100),
+                        border: Border.all(color: colors.outline),
                       ),
                       child: FutureBuilder<List<Commentaire>>(
                         future: getComments(lieu.id!),
@@ -181,26 +198,29 @@ class _LieuDetailsState extends State<LieuDetails> {
                               padding: const EdgeInsets.all(16.0),
                               child: Text(
                                 'Erreur lors du chargement des commentaires : ${snapshot.error}',
-                                style: const TextStyle(color: Colors.red),
+                                style: TextStyle(color: colors.error),
                               ),
                             );
                           } else if (!snapshot.hasData ||
                               snapshot.data!.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
+                            return Padding(
+                              padding: const EdgeInsets.all(16.0),
                               child: Text(
                                 'Aucun commentaire pour ce lieu',
-                                style: TextStyle(fontStyle: FontStyle.italic),
+                                style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: colors.onSurface,
+                                ),
                               ),
                             );
                           } else {
                             final commentaires = snapshot.data!;
                             return ListView.separated(
-                              shrinkWrap: true, // pour SingleChildScrollView
+                              shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: commentaires.length,
                               separatorBuilder: (context, index) =>
-                                  const Divider(),
+                                  Divider(color: colors.outline),
                               itemBuilder: (context, index) {
                                 final c = commentaires[index];
                                 return ListTile(
@@ -208,17 +228,20 @@ class _LieuDetailsState extends State<LieuDetails> {
                                     horizontal: 16,
                                     vertical: 8,
                                   ),
-                                  tileColor: Colors.white,
+                                  tileColor: colors.surface,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   title: Text(
                                     c.contenu,
-                                    style: const TextStyle(fontSize: 16),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: colors.onSurface,
+                                    ),
                                   ),
-                                  leading: const Icon(
+                                  leading: Icon(
                                     Icons.comment,
-                                    color: Colors.blueAccent,
+                                    color: colors.primary,
                                   ),
                                 );
                               },

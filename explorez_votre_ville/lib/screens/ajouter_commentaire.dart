@@ -1,5 +1,6 @@
 import 'package:explorez_votre_ville/db/intermediaires.dart';
 import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -49,7 +50,24 @@ class _CommenterEtNoterState extends State<CommenterEtNoter> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode
+                      ? Icons.dark_mode
+                      : Icons.light_mode,
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme();
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(10),
         child: Consumer<LieuProvider>(

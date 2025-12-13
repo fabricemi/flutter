@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 class ShowMeteo extends StatelessWidget {
   final Meteo meteo;
   const ShowMeteo({super.key, required this.meteo});
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -17,10 +20,10 @@ class ShowMeteo extends StatelessWidget {
               children: [
                 Text(
                   meteo.city,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -36,7 +39,10 @@ class ShowMeteo extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       "${meteo.tempNumData.temp}°C",
-                      style: const TextStyle(fontSize: 20, color: Colors.black),
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: colorScheme.onSurface,
+                      ),
                     ),
                   ],
                 ),
@@ -44,20 +50,20 @@ class ShowMeteo extends StatelessWidget {
             ),
           ],
         ),
-        Divider(),
+        Divider(color: colorScheme.outline),
         Card(
           elevation: 6,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          color: Colors.teal.shade50,
+          color: colorScheme.surfaceVariant,
           child: Padding(
             padding: EdgeInsetsGeometry.all(20),
             child: Column(
               children: [
                 Row(
                   children: [
-                    Icon(Icons.cloud, color: Colors.teal, size: 28),
+                    Icon(Icons.cloud, color: colorScheme.primary, size: 28),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -65,6 +71,7 @@ class ShowMeteo extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -73,6 +80,7 @@ class ShowMeteo extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -80,7 +88,7 @@ class ShowMeteo extends StatelessWidget {
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.thermostat, color: Colors.teal, size: 28),
+                    Icon(Icons.thermostat, color: colorScheme.primary, size: 28),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -88,6 +96,7 @@ class ShowMeteo extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -96,6 +105,7 @@ class ShowMeteo extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -103,7 +113,7 @@ class ShowMeteo extends StatelessWidget {
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.water_drop, color: Colors.teal, size: 28),
+                    Icon(Icons.water_drop, color: colorScheme.primary, size: 28),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -111,6 +121,7 @@ class ShowMeteo extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -119,6 +130,7 @@ class ShowMeteo extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -126,7 +138,7 @@ class ShowMeteo extends StatelessWidget {
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.air, color: Colors.teal, size: 28),
+                    Icon(Icons.air, color: colorScheme.primary, size: 28),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -134,6 +146,7 @@ class ShowMeteo extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -142,6 +155,7 @@ class ShowMeteo extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ],

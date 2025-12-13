@@ -358,29 +358,35 @@ class _SearchPageState extends State<SearchPage> {
               ),
 
               const SizedBox(height: 25),
-              Text("Les Favoris"),
+              Text(
+                "Les Favoris",
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               FutureBuilder<List<Lieu>>(
                 future: _futurListLieux,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
+                    return CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary,
+                    );
                   } else if (snapshot.hasError) {
-                    return Text('Erreur : ${snapshot.error}');
+                    return Text(
+                      'Erreur : ${snapshot.error}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    );
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Text('Aucun lieu favoris');
+                    return Text(
+                      'Aucun lieu favoris',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    );
                   } else {
                     return PlacesListView(favoris: snapshot.data!);
-                    /* Consumer<LieuProvider>(
-                      builder: (context, value, child) {
-                        return PlacesListView(
-                          favoris: snapshot.data!,
-                          onVoirClicked: (l) {
-                            value.changerLieu(l);
-                            Navigator.pushNamed(context, "/details");
-                          },
-                        );
-                      },
-                    ); */
                   }
                 },
               ),
