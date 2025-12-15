@@ -16,6 +16,7 @@ class CommenterEtNoter extends StatefulWidget {
 
 class _CommenterEtNoterState extends State<CommenterEtNoter> {
   late int _currentValue;
+  Lieu? onBack;
   final TextEditingController _controller = TextEditingController();
 
   @override
@@ -51,18 +52,37 @@ class _CommenterEtNoterState extends State<CommenterEtNoter> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+
+        title: const Text(
+          "Recherche",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+
+        leading: Consumer<LieuProvider>(
+          builder: (context, value, _) {
+            return IconButton(
+              tooltip: "Voir les détails",
+              icon: const Icon(Icons.info_outline),
+              onPressed: () {
+                if (onBack != null) {
+                  value.changerLieu(onBack!);
+                }
+                Navigator.pop(context);
+              },
+            );
+          },
+        ),
         actions: [
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, _) {
               return IconButton(
+                tooltip: "Changer le thème",
                 icon: Icon(
-                  themeProvider.isDarkMode
-                      ? Icons.dark_mode
-                      : Icons.light_mode,
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 ),
-                onPressed: () {
-                  themeProvider.toggleTheme();
-                },
+                onPressed: themeProvider.toggleTheme,
               );
             },
           ),
@@ -88,6 +108,7 @@ class _CommenterEtNoterState extends State<CommenterEtNoter> {
                 ),
               );
             }
+            onBack = lieu;
 
             return SingleChildScrollView(
               child: Column(

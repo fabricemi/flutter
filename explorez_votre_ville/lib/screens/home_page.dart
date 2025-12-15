@@ -1,7 +1,7 @@
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:provider/provider.dart';
-import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -15,9 +15,7 @@ class HomePage extends StatelessWidget {
             builder: (context, themeProvider, _) {
               return IconButton(
                 icon: Icon(
-                  themeProvider.isDarkMode
-                      ? Icons.dark_mode
-                      : Icons.light_mode,
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 ),
                 onPressed: () {
                   themeProvider.toggleTheme();
@@ -79,8 +77,7 @@ class HomePage extends StatelessWidget {
               },
               icon: Icon(Icons.travel_explore),
               label: Text("Commencez"),
-            )
-
+            ),
           ],
         ),
       ),

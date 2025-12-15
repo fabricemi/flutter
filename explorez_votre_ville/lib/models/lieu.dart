@@ -6,6 +6,7 @@ class Lieu {
   String city;
   double? cityLat;
   double? cityLon;
+  String? categorie;
 
   Lieu({
     this.id,
@@ -15,6 +16,7 @@ class Lieu {
     required this.city,
     this.cityLat,
     this.cityLon,
+    this.categorie,
   });
 
   factory Lieu.fromJson(

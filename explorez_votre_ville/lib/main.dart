@@ -17,9 +17,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LieuProvider()),
-        ChangeNotifierProvider(
-          create: (_) => ThemeProvider()..loadTheme(),
-        ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..loadTheme()),
         ChangeNotifierProvider(
           create: (_) => RechercheProviders()
             ..loadFavoriteCity()

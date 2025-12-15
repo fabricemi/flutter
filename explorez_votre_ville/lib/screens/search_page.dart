@@ -1,6 +1,7 @@
 import 'package:explorez_votre_ville/db/db.dart';
 import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
 import 'package:explorez_votre_ville/listeners/recherche_providers.dart';
+import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
 import 'package:explorez_votre_ville/widgets/dialogs_page.dart';
 import 'package:explorez_votre_ville/widgets/place_plot.dart';
@@ -14,10 +15,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:explorez_votre_ville/listeners/theme_provider.dart';
-import 'package:explorez_votre_ville/listeners/recherche_providers.dart';
-
-
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -34,6 +31,7 @@ class _SearchPageState extends State<SearchPage> {
   List<PlacePlot> lieux = [];
   Future<List<Lieu>> _futurListLieux = Future.value([]);
   Future<List<Lieu>> _futurListLieuxTrouve = Future.value([]);
+  String? categorie;
 
   Future<Meteo>? _meteo;
 
@@ -43,7 +41,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _getRandomFavoris();
-    _loadLieux();
+    //_loadLieux();
   }
 
   /// Localisation GPS (non utilisée pour l'instant)
@@ -100,14 +98,31 @@ class _SearchPageState extends State<SearchPage> {
     } else {
       _controller.text = city.first.name;
       _latLng = LatLng(city.first.lat, city.first.lon);
-      _futurListLieux = getLieux(_controller.text);
+      _futurListLieux = getLieuxFavoris(_controller.text);
     }
     //getPlaceByName("le louvre", 48.8566, 2.3522, "Paris");
     setState(() {
       _meteo = fetchCityInfoFromOWM(_controller.text);
+      _futurListLieux.then((value) {
+        lieux = value.map((e) {
+          return PlacePlot(
+            e: e,
+            isFavoris: true,
+            onTap: (lieu, isfav) {
+              /*  if (isfav == true) {
+                context.read<LieuProvider>().changerLieu(lieu);
+                Navigator.pushNamed(context, "/details");
+              } */
+              //_insert(e, v: _controller.text);
+              context.read<LieuProvider>().changerLieu(lieu);
+              Navigator.pushNamed(context, "/details");
+            },
+          );
+        }).toList();
+      });
     });
     _mapController.move(_latLng, 12.0);
-    _loadLieux();
+    //_loadLieux();
   }
 
   void _searchCity() async {
@@ -119,8 +134,6 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     ville = _controller.text;
-    context.read<RechercheProviders>().addRecentSearch(_controller.text);
-
 
     try {
       List<double> location = await getCoordinates(_controller.text);
@@ -129,11 +142,11 @@ class _SearchPageState extends State<SearchPage> {
         setState(() {
           _latLng = LatLng(location[0], location[1]);
           _meteo = fetchCityInfoFromOWM(_controller.text);
-          _futurListLieux = getLieux(_controller.text);
+          _futurListLieux = getLieuxFavoris(_controller.text);
         });
 
         _mapController.move(_latLng, 12.0);
-        _loadLieux();
+        //_loadLieux();
       }
     } catch (e) {
       ScaffoldMessenger.of(
@@ -152,12 +165,12 @@ class _SearchPageState extends State<SearchPage> {
     print("fin");
 
     setState(() {
-      _futurListLieux = getLieux(_controller.text);
+      _futurListLieux = getLieuxFavoris(_controller.text);
     });
   }
 
   /// Charger les lieux proches d’une ville
-  Future<void> _loadLieux() async {
+  /*   Future<void> _loadLieux() async {
     final value = await getCityPlaces(_latLng.latitude, _latLng.longitude);
     setState(() {
       lieux = value.map((e) {
@@ -169,7 +182,7 @@ class _SearchPageState extends State<SearchPage> {
         );
       }).toList();
     });
-  }
+  } */
 
   Future<void> _loadLieux2(String categorie) async {
     final value = await getCityPlacesAvecCategorie(
@@ -178,19 +191,34 @@ class _SearchPageState extends State<SearchPage> {
       categorie,
       ville: _controller.text,
     );
+
+    final favoris = <String>{};
+    for (final l in value) {
+      if (await isLieuFavori(l.name)) {
+        favoris.add(l.name);
+      }
+    }
+
     setState(() {
       lieux = value.map((e) {
+        final isFav = favoris.contains(e.name);
         return PlacePlot(
           e: e,
-          onTap: (lieu) {
-            _insert(e, v: _controller.text);
+          isFavoris: isFav,
+          onTap: (lieu, isFav) {
+            if (!isFav) {
+              _insert(lieu, v: _controller.text);
+            } else {
+              /* context.read<LieuProvider>().changerLieu(lieu);
+              Navigator.pushNamed(context, "/details"); */
+            }
           },
         );
       }).toList();
     });
   }
 
-  Future<void> _feedSearchLieuList(String value) async {
+  /*  Future<void> _feedSearchLieuList(String value) async {
     setState(() {
       _futurListLieuxTrouve = getPlaceByName(
         value,
@@ -199,7 +227,7 @@ class _SearchPageState extends State<SearchPage> {
         _controller.text,
       );
     });
-  }
+  } */
 
   @override
   Widget build(BuildContext context) {
@@ -211,9 +239,7 @@ class _SearchPageState extends State<SearchPage> {
             builder: (context, themeProvider, _) {
               return IconButton(
                 icon: Icon(
-                  themeProvider.isDarkMode
-                      ? Icons.dark_mode
-                      : Icons.light_mode,
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 ),
                 onPressed: () {
                   themeProvider.toggleTheme();
@@ -358,37 +384,34 @@ class _SearchPageState extends State<SearchPage> {
               ),
 
               const SizedBox(height: 25),
-              Text(
-                "Les Favoris",
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+              Text("Les Favoris"),
+              SizedBox(
+                height: 180,
+                child: FutureBuilder<List<Lieu>>(
+                  future: _futurListLieux,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text('Erreur : ${snapshot.error}');
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Text('Aucun lieu favoris');
+                    } else {
+                      return PlacesListView(favoris: snapshot.data!);
+                      /* Consumer<LieuProvider>(
+                        builder: (context, value, child) {
+                          return PlacesListView(
+                            favoris: snapshot.data!,
+                            onVoirClicked: (l) {
+                              value.changerLieu(l);
+                              Navigator.pushNamed(context, "/details");
+                            },
+                          );
+                        },
+                      ); */
+                    }
+                  },
                 ),
-              ),
-              FutureBuilder<List<Lieu>>(
-                future: _futurListLieux,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary,
-                    );
-                  } else if (snapshot.hasError) {
-                    return Text(
-                      'Erreur : ${snapshot.error}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    );
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Text(
-                      'Aucun lieu favoris',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    );
-                  } else {
-                    return PlacesListView(favoris: snapshot.data!);
-                  }
-                },
               ),
             ],
           ),

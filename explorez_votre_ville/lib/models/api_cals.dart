@@ -203,7 +203,7 @@ Future<String?> getStreetViewImageUrl(
     final query = Uri.encodeComponent(placeName);
 
     String geoUrl =
-        "https://api.geoapify.com/v1/geocode/search?text=$query&limit=1&apiKey=$API_KEY";
+        "https://api.geoapify.com/v1/geocode/search?text=${query}&limit=1&apiKey=$API_KEY";
 
     final geoResponse = await http.get(Uri.parse(geoUrl));
 
@@ -218,7 +218,7 @@ Future<String?> getStreetViewImageUrl(
     final double finalLon = lon ?? (props['lon'] as double? ?? 0);
 
     String streetViewUrl =
-        "https://maps.googleapis.com/maps/api/streetview?size=600x400&location=$finalLat,$finalLon&key=$googleApiKey";
+        "https://maps.googleapis.com/maps/api/streetview?size=100x100&location=$finalLat,$finalLon&key=$googleApiKey";
 
     return streetViewUrl;
   } catch (e) {
@@ -253,5 +253,47 @@ Future<LieuInfo?> getLieuInfo(double lat, double lon) async {
   } catch (e) {
     //print("Erreur lors de la récupération du lieu : $e");
     return null;
+  }
+}
+
+Future<String> getImage(double lat, double lon) async {
+  final urlNominatim =
+      "https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json";
+  final response = await http.get(
+    Uri.parse(urlNominatim),
+    headers: {'User-Agent': 'FlutterApp'},
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    String placeName = "";
+    if (data["address"] != null) {
+      final address = data["address"];
+      if (address["road"] != null && address["city"] != null) {
+        placeName = "${address["road"]} ${address["city"]}";
+      } else {
+        placeName = data["display_name"] ?? "Paris";
+      }
+    }
+    String query = placeName.replaceAll(" ", "+");
+    const unsplashKey = "Ny05oNo4wmT88eqPwposnBGdWKZCJzOFGY99VpTCIYk";
+    final unsplashUrl =
+        "https://api.unsplash.com/search/photos?query=$query&client_id=$unsplashKey";
+    final unsplashResponse = await http.get(Uri.parse(unsplashUrl));
+    if (unsplashResponse.statusCode == 200) {
+      final unsplashData = jsonDecode(unsplashResponse.body);
+      if (unsplashData["results"] != null &&
+          unsplashData["results"].length > 0) {
+        final imageUrl = unsplashData["results"][0]["urls"]["regular"];
+        return imageUrl;
+      }
+      return "404";
+    } else {
+      //print("Erreur Unsplash : ${unsplashResponse.statusCode}");
+      return "404";
+    }
+  } else {
+    //print("Erreur Nominatim : ${response.statusCode}");
+    return "404";
   }
 }

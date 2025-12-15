@@ -56,7 +56,7 @@ class ShowMeteo extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          color: colorScheme.surfaceVariant,
+          color: colorScheme.surfaceContainerHighest,
           child: Padding(
             padding: EdgeInsetsGeometry.all(20),
             child: Column(
@@ -88,7 +88,11 @@ class ShowMeteo extends StatelessWidget {
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.thermostat, color: colorScheme.primary, size: 28),
+                    Icon(
+                      Icons.thermostat,
+                      color: colorScheme.primary,
+                      size: 28,
+                    ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -113,7 +117,11 @@ class ShowMeteo extends StatelessWidget {
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.water_drop, color: colorScheme.primary, size: 28),
+                    Icon(
+                      Icons.water_drop,
+                      color: colorScheme.primary,
+                      size: 28,
+                    ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(

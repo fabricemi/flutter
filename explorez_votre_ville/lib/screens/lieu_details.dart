@@ -32,13 +32,13 @@ class _LieuDetailsState extends State<LieuDetails> {
         info = value;
       });
     }
+    await getImage(lieu.lat, lieu.lon);
   }
 
   @override
   Widget build(BuildContext context) {
     final lieuProvider = Provider.of<LieuProvider>(context);
     final lieu = lieuProvider.lieu;
-    final colors = Theme.of(context).colorScheme;
 
     if (lieu == null) {
       return Scaffold(
@@ -62,23 +62,38 @@ class _LieuDetailsState extends State<LieuDetails> {
       );
     }
 
-    if (!_loadingInfo) {
-      _getInfo(lieu);
-    }
+    _getInfo(lieu);
 
     LatLng latLng = LatLng(lieu.lat, lieu.lon);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Détails du lieu"),
+        automaticallyImplyLeading: false,
+        title: const Text(
+          "Détails du lieu",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+
+        leading: Consumer<LieuProvider>(
+          builder: (context, value, _) {
+            return IconButton(
+              tooltip: "Retour à la recherche",
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            );
+          },
+        ),
+
         actions: [
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, _) {
               return IconButton(
+                tooltip: "Changer le thème",
                 icon: Icon(
-                  themeProvider.isDarkMode
-                      ? Icons.dark_mode
-                      : Icons.light_mode,
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 ),
                 onPressed: themeProvider.toggleTheme,
               );
@@ -86,6 +101,7 @@ class _LieuDetailsState extends State<LieuDetails> {
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -97,12 +113,38 @@ class _LieuDetailsState extends State<LieuDetails> {
                   child: Text(
                     "Détails du lieu ${lieu.name}",
                     style: const TextStyle(
-                      fontSize: 26,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
+              ),
+              FutureBuilder(
+                future: getNote(lieu.id!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    print(snapshot.error.toString());
+                    return Text("La note de ce lieu est indisponible");
+                  } else {
+                    final data = snapshot.data!;
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          "Ce lieu est noté $data",
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 15),
               SizedBox(
@@ -113,7 +155,7 @@ class _LieuDetailsState extends State<LieuDetails> {
                   children: [
                     TileLayer(
                       urlTemplate:
-                      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                       subdomains: const ['a', 'b', 'c', 'd'],
                     ),
                     MarkerLayer(
@@ -130,7 +172,7 @@ class _LieuDetailsState extends State<LieuDetails> {
                                   Expanded(
                                     child: Tooltip(
                                       message:
-                                      info?.toString() ??
+                                          info?.toString() ??
                                           "Description non disponible",
                                       child: ElevatedButton(
                                         onPressed: () {},
@@ -173,16 +215,16 @@ class _LieuDetailsState extends State<LieuDetails> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: colors.primary,
+                        color: Colors.blueAccent,
                         letterSpacing: 1.0,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
-                        color: colors.surfaceVariant,
+                        color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colors.outline),
+                        border: Border.all(color: Colors.blueAccent.shade100),
                       ),
                       child: FutureBuilder<List<Commentaire>>(
                         future: getComments(lieu.id!),
@@ -198,29 +240,26 @@ class _LieuDetailsState extends State<LieuDetails> {
                               padding: const EdgeInsets.all(16.0),
                               child: Text(
                                 'Erreur lors du chargement des commentaires : ${snapshot.error}',
-                                style: TextStyle(color: colors.error),
+                                style: const TextStyle(color: Colors.red),
                               ),
                             );
                           } else if (!snapshot.hasData ||
                               snapshot.data!.isEmpty) {
-                            return Padding(
-                              padding: const EdgeInsets.all(16.0),
+                            return const Padding(
+                              padding: EdgeInsets.all(16.0),
                               child: Text(
                                 'Aucun commentaire pour ce lieu',
-                                style: TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  color: colors.onSurface,
-                                ),
+                                style: TextStyle(fontStyle: FontStyle.italic),
                               ),
                             );
                           } else {
                             final commentaires = snapshot.data!;
                             return ListView.separated(
-                              shrinkWrap: true,
+                              shrinkWrap: true, // pour SingleChildScrollView
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: commentaires.length,
                               separatorBuilder: (context, index) =>
-                                  Divider(color: colors.outline),
+                                  const Divider(),
                               itemBuilder: (context, index) {
                                 final c = commentaires[index];
                                 return ListTile(
@@ -228,20 +267,17 @@ class _LieuDetailsState extends State<LieuDetails> {
                                     horizontal: 16,
                                     vertical: 8,
                                   ),
-                                  tileColor: colors.surface,
+                                  tileColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   title: Text(
                                     c.contenu,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: colors.onSurface,
-                                    ),
+                                    style: const TextStyle(fontSize: 16),
                                   ),
-                                  leading: Icon(
+                                  leading: const Icon(
                                     Icons.comment,
-                                    color: colors.primary,
+                                    color: Colors.blueAccent,
                                   ),
                                 );
                               },

@@ -84,12 +84,9 @@ Future<void> inserLieu(Lieu f, {String? ville}) async {
 
   // insérer la ville si elle n'existe pas
   if (!exists) {
-    print(" → ville inexistante, insertion…");
     City city = City(name: nom, lat: f.cityLat!, lon: f.cityLon!);
     await inserVille(city);
-  } else {
-    print(" → la ville existe déjà.");
-  }
+  } else {}
 
   f.city = nom;
   // insérer le lieu
@@ -146,7 +143,7 @@ Future<List<City>> getCities() async {
   return l;
 }
 
-Future<List<Lieu>> getLieux(String cityName) async {
+Future<List<Lieu>> getLieuxFavoris(String cityName) async {
   print("recherche $cityName");
   final db = await getDatabase();
 
@@ -229,4 +226,43 @@ Future<List<Commentaire>> getComments(int idLieu) async {
 
   print('la liste des commentaires : $commentaires');
   return commentaires;
+}
+
+Future<bool> isLieuFavori(String name) async {
+  final db = await getDatabase();
+
+  final result = await db.query(
+    'lieux',
+    columns: ['id'],
+    where: 'name = ?',
+    whereArgs: [name],
+    limit: 1,
+  );
+
+  return result.isNotEmpty;
+}
+
+Future<String> getNote(int idLieu) async {
+  final db = await getDatabase();
+  final favMaps = await db.query(
+    'commentaires',
+    where: 'lieu_id = ?',
+    whereArgs: [idLieu],
+  );
+  final commentaires = favMaps.map((c) {
+    return Commentaire(c['texte'] as String, idLieu, c['note'] as int? ?? 0);
+  }).toList();
+
+  int somme = (commentaires
+      .map<int>((e) {
+        return e.note;
+      })
+      .reduce((value, element) => value + element));
+  int n;
+  if (commentaires.isEmpty) {
+    n = 1;
+  } else {
+    n = (somme / commentaires.length).round();
+  }
+  return "$n/10";
 }
