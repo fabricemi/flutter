@@ -8,6 +8,7 @@ import 'package:explorez_votre_ville/widgets/place_plot.dart';
 import 'package:explorez_votre_ville/widgets/places.dart';
 import 'package:explorez_votre_ville/widgets/searche_by_name.dart';
 import 'package:explorez_votre_ville/widgets/show_meteo.dart';
+import 'package:explorez_votre_ville/widgets/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:explorez_votre_ville/models/meteo.dart';
 import 'package:explorez_votre_ville/models/api_cals.dart';
@@ -232,22 +233,24 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Rechercher une ville"),
-        actions: [
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, _) {
-              return IconButton(
-                icon: Icon(
-                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                ),
+      appBar: AppBar(title: const Text("Rechercher une ville")),
+      drawer: SafeArea(
+        child: Drawer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              ThemeButton(),
+              ElevatedButton.icon(
                 onPressed: () {
-                  themeProvider.toggleTheme();
+                  Navigator.pushNamed(context, "/");
                 },
-              );
-            },
+                icon: Icon(Icons.home),
+                label: Text("Acceuil"),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -299,41 +302,6 @@ class _SearchPageState extends State<SearchPage> {
                 spacing: 8.0,
                 runSpacing: 4.0,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text(
-                              "Recherche un lieu dans la ville de ${_controller.text}",
-                            ),
-                            content: SizedBox(
-                              width: double.maxFinite,
-                              child: AddLieuComplted(
-                                city: _controller.text,
-                                latLng: _latLng,
-                                onAddLieuCalled: (lieu) {
-                                  _insert(lieu, v: _controller.text);
-                                },
-                              ),
-                            ),
-                            actions: [
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                                child: Text("Fermer"),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    icon: Icon(Icons.add_location_alt),
-
-                    label: Text("Ajouter un lieu par le nom"),
-                  ),
                   ElevatedButton.icon(
                     onPressed: () async {
                       final categorie = await showCategoriesDialog(context);
@@ -416,6 +384,46 @@ class _SearchPageState extends State<SearchPage> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            tooltip: "Recherche par le nom",
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text(
+                      "Recherche un lieu dans la ville de ${_controller.text}",
+                    ),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: AddLieuComplted(
+                        city: _controller.text,
+                        latLng: _latLng,
+                        onAddLieuCalled: (lieu) {
+                          _insert(lieu, v: _controller.text);
+                        },
+                      ),
+                    ),
+
+                    actions: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text("Fermer"),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            child: Icon(Icons.text_fields),
+          ),
+        ],
       ),
     );
   }

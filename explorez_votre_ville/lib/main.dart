@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  //necessaire pour le = fonctionnement de la base de donnée sur windows...
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
@@ -39,6 +40,7 @@ class Base extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Explorez Votre Ville',
+
       themeMode: themeProvider.themeMode,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),

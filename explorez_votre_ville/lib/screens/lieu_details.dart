@@ -4,6 +4,7 @@ import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 import 'package:explorez_votre_ville/models/api_cals.dart';
 import 'package:explorez_votre_ville/models/commentaire.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
+import 'package:explorez_votre_ville/widgets/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -17,6 +18,9 @@ class LieuDetails extends StatefulWidget {
 }
 
 class _LieuDetailsState extends State<LieuDetails> {
+  final TextEditingController _controller = TextEditingController(
+    text: "empty",
+  );
   final MapController _mapController = MapController();
   LieuInfo? info;
   bool _loadingInfo = false;
@@ -33,6 +37,17 @@ class _LieuDetailsState extends State<LieuDetails> {
       });
     }
     await getImage(lieu.lat, lieu.lon);
+  }
+
+  void _deleteComment(int commentaire) async {
+    await deleteComment(commentaire);
+    setState(() {});
+  }
+
+  void _updateCommente(Commentaire c) async {
+    print("modifier en $c");
+    await updateCommentFromObject(c);
+    setState(() {});
   }
 
   @override
@@ -68,40 +83,34 @@ class _LieuDetailsState extends State<LieuDetails> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         title: const Text(
           "Détails du lieu",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        centerTitle: true,
-
-        leading: Consumer<LieuProvider>(
-          builder: (context, value, _) {
-            return IconButton(
-              tooltip: "Retour à la recherche",
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            );
-          },
-        ),
-
-        actions: [
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, _) {
-              return IconButton(
-                tooltip: "Changer le thème",
-                icon: Icon(
-                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                ),
-                onPressed: themeProvider.toggleTheme,
-              );
-            },
-          ),
-        ],
       ),
-
+      drawer: SafeArea(
+        child: Drawer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              ThemeButton(),
+              Consumer<LieuProvider>(
+                builder: (context, value, _) {
+                  return ElevatedButton.icon(
+                    label: Text("Retour à la recherche"),
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -262,6 +271,7 @@ class _LieuDetailsState extends State<LieuDetails> {
                                   const Divider(),
                               itemBuilder: (context, index) {
                                 final c = commentaires[index];
+
                                 return ListTile(
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -275,9 +285,81 @@ class _LieuDetailsState extends State<LieuDetails> {
                                     c.contenu,
                                     style: const TextStyle(fontSize: 16),
                                   ),
-                                  leading: const Icon(
-                                    Icons.comment,
-                                    color: Colors.blueAccent,
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min, // ← key fix
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          _deleteComment(c.id!);
+                                        },
+                                        icon: Icon(Icons.delete),
+                                        label: Text("Supprimer"),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          _controller.text = c.contenu;
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) {
+                                              return AlertDialog(
+                                                content: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      "Modifier ce commentaire sur: ${lieu.name}",
+                                                    ),
+                                                    TextField(
+                                                      controller: _controller,
+                                                      minLines: 5,
+                                                      maxLines: 10,
+                                                      textAlignVertical:
+                                                          TextAlignVertical.top,
+                                                      decoration: InputDecoration(
+                                                        border: OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12.0,
+                                                              ),
+                                                        ),
+                                                        hintText:
+                                                            "Écrivez votre commentaire ici...",
+                                                      ),
+                                                    ),
+                                                    ElevatedButton.icon(
+                                                      onPressed: () {
+                                                        c.contenu =
+                                                            _controller.text;
+                                                        _updateCommente(c);
+                                                        Navigator.pop(context);
+                                                      },
+                                                      label: Text("Modifier"),
+                                                      icon: Icon(Icons.edit),
+                                                    ),
+                                                  ],
+                                                ),
+                                                actions: [],
+                                              );
+                                            },
+                                          );
+                                        },
+                                        icon: Icon(Icons.edit),
+                                        label: Text("Modifier"),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               },

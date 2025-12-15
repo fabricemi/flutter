@@ -37,6 +37,10 @@ Future<void> insererUnLieu(Lieu lieu, {String? ville}) async {
 }
 
 Future<void> ajouterUnCommentaire(Lieu lieu, String contenu, int note) async {
-  Commentaire commentaire = Commentaire(contenu, lieu.id, note);
+  Commentaire commentaire = Commentaire(
+    contenu: contenu,
+    lieu_id: lieu.id,
+    note: note,
+  );
   await ajouterCommentaire(lieu, commentaire);
 }

@@ -212,6 +212,35 @@ Future<void> deleteLieu(int id) async {
   }
 }
 
+Future<void> deleteComment(int id) async {
+  final db = await openDatabase('favoris.db');
+  try {
+    await db.delete('commentaires', where: 'id = ?', whereArgs: [id]);
+  } catch (e) {
+    //print("Erreur lors de la suppression du lieu : $e");
+  }
+}
+
+Future<void> updateCommentFromObject(Commentaire commentaire) async {
+  final db = await openDatabase('favoris.db');
+
+  try {
+    await db.update(
+      'commentaires',
+      {
+        'texte': commentaire.contenu,
+        'note': commentaire.note,
+        'lieu_id': commentaire.lieu_id,
+      },
+      where: 'id = ?',
+      whereArgs: [commentaire.id],
+    );
+    print('Commentaire mis à jour avec succès');
+  } catch (e) {
+    print("Erreur lors de la mise à jour du commentaire : $e");
+  }
+}
+
 Future<List<Commentaire>> getComments(int idLieu) async {
   final db = await getDatabase();
   final favMaps = await db.query(
@@ -221,7 +250,12 @@ Future<List<Commentaire>> getComments(int idLieu) async {
   );
 
   final commentaires = favMaps.map((c) {
-    return Commentaire(c['texte'] as String, idLieu, c['note'] as int? ?? 0);
+    return Commentaire(
+      id: c["id"] as int?,
+      contenu: c['texte'] as String,
+      lieu_id: idLieu,
+      note: c['note'] as int? ?? 1,
+    );
   }).toList();
 
   print('la liste des commentaires : $commentaires');
@@ -250,7 +284,12 @@ Future<String> getNote(int idLieu) async {
     whereArgs: [idLieu],
   );
   final commentaires = favMaps.map((c) {
-    return Commentaire(c['texte'] as String, idLieu, c['note'] as int? ?? 0);
+    return Commentaire(
+      id: c["id"] as int?,
+      contenu: c['texte'] as String,
+      lieu_id: idLieu,
+      note: c['note'] as int? ?? 1,
+    );
   }).toList();
 
   int somme = (commentaires

@@ -2,6 +2,7 @@ import 'package:explorez_votre_ville/db/intermediaires.dart';
 import 'package:explorez_votre_ville/listeners/lieu_provider.dart';
 import 'package:explorez_votre_ville/listeners/theme_provider.dart';
 import 'package:explorez_votre_ville/models/lieu.dart';
+import 'package:explorez_votre_ville/widgets/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:numberpicker/numberpicker.dart';
@@ -52,41 +53,37 @@ class _CommenterEtNoterState extends State<CommenterEtNoter> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         centerTitle: true,
-
         title: const Text(
           "Recherche",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-
-        leading: Consumer<LieuProvider>(
-          builder: (context, value, _) {
-            return IconButton(
-              tooltip: "Voir les détails",
-              icon: const Icon(Icons.info_outline),
-              onPressed: () {
-                if (onBack != null) {
-                  value.changerLieu(onBack!);
-                }
-                Navigator.pop(context);
-              },
-            );
-          },
-        ),
-        actions: [
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, _) {
-              return IconButton(
-                tooltip: "Changer le thème",
-                icon: Icon(
-                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                ),
-                onPressed: themeProvider.toggleTheme,
-              );
-            },
+      ),
+      drawer: SafeArea(
+        child: Drawer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              ThemeButton(),
+              Consumer<LieuProvider>(
+                builder: (context, value, _) {
+                  return ElevatedButton.icon(
+                    label: Text("Revenir aux détails"),
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      if (onBack != null) {
+                        value.changerLieu(onBack!);
+                      }
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10),
